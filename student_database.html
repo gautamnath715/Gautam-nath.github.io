@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Database — SQL Project</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --card: #1a2235;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --orange: #f97316;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .header-top { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .db-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 13px; color: var(--muted); font-family: var(--mono); margin-left: 58px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--surface); padding: 4px; border-radius: 10px; width: fit-content; }
+  .tab {
+    padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; background: transparent; color: var(--muted);
+    transition: all 0.2s; font-family: var(--sans);
+  }
+  .tab.active { background: var(--card); color: var(--accent); box-shadow: 0 0 0 1px var(--border); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* SQL SCHEMA */
+  .schema-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .sql-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  .sql-card:nth-child(2) { animation-delay: 0.07s; }
+  .sql-card:nth-child(3) { animation-delay: 0.14s; }
+  .sql-card:nth-child(4) { animation-delay: 0.21s; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+  .card-header {
+    padding: 12px 16px;
+    background: rgba(0,212,255,0.06);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .card-title { font-size: 12px; font-weight: 700; font-family: var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+  .card-badge { margin-left: auto; font-size: 10px; background: rgba(124,58,237,0.2); color: #a78bfa; padding: 2px 8px; border-radius: 20px; font-family: var(--mono); }
+
+  pre {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: #94a3b8;
+  }
+  .kw { color: #7dd3fc; font-weight: 700; }
+  .type { color: #a78bfa; }
+  .str { color: #86efac; }
+  .num { color: #fbbf24; }
+  .cmt { color: #475569; font-style: italic; }
+  .fn { color: #f472b6; }
+  .tbl { color: var(--accent); }
+  .con { color: #fb923c; }
+
+  /* QUERIES SECTION */
+  .query-list { display: flex; flex-direction: column; gap: 16px; }
+  .query-block {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  .query-block:nth-child(2) { animation-delay: 0.05s; }
+  .query-block:nth-child(3) { animation-delay: 0.1s; }
+  .query-block:nth-child(4) { animation-delay: 0.15s; }
+  .query-block:nth-child(5) { animation-delay: 0.2s; }
+  .query-block:nth-child(6) { animation-delay: 0.25s; }
+  .query-block:nth-child(7) { animation-delay: 0.3s; }
+  .query-block:nth-child(8) { animation-delay: 0.35s; }
+  .qheader {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    background: rgba(0,0,0,0.2);
+  }
+  .qnum { font-size: 11px; font-family: var(--mono); font-weight: 700; color: var(--accent2); background: rgba(124,58,237,0.15); padding: 2px 8px; border-radius: 4px; }
+  .qtitle { font-size: 13px; font-weight: 600; flex: 1; }
+  .qtag { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-family: var(--mono); font-weight: 600; }
+  .tag-select { background: rgba(34,197,94,0.1); color: #4ade80; }
+  .tag-insert { background: rgba(251,191,36,0.1); color: #fcd34d; }
+  .tag-update { background: rgba(249,115,22,0.1); color: #fb923c; }
+  .tag-delete { background: rgba(239,68,68,0.1); color: #f87171; }
+  .tag-view { background: rgba(0,212,255,0.1); color: var(--accent); }
+  .tag-proc { background: rgba(168,85,247,0.1); color: #c084fc; }
+  .toggle-arrow { color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .query-block.open .toggle-arrow { transform: rotate(90deg); }
+
+  .qbody { display: none; padding: 0; }
+  .query-block.open .qbody { display: block; }
+  .qdesc { padding: 10px 16px 4px; font-size: 12px; color: var(--muted); }
+
+  /* DATA TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); animation: fadeUp 0.4s ease; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: rgba(0,212,255,0.06); border-bottom: 1px solid var(--border); }
+  th { padding: 11px 14px; text-align: left; font-size: 11px; font-family: var(--mono); font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid rgba(30,45,69,0.5); white-space: nowrap; font-family: var(--mono); font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,212,255,0.03); }
+
+  .grade-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; font-family: var(--mono);
+  }
+  .grade-O { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .grade-A { background: rgba(0,212,255,0.15); color: var(--accent); }
+  .grade-B { background: rgba(168,85,247,0.15); color: #c084fc; }
+  .grade-C { background: rgba(234,179,8,0.15); color: #fcd34d; }
+  .grade-D { background: rgba(249,115,22,0.15); color: #fb923c; }
+  .grade-F { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  .att-bar { display: flex; align-items: center; gap: 8px; }
+  .att-track { width: 64px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .att-fill { height: 100%; border-radius: 3px; }
+  .att-hi .att-fill { background: var(--green); }
+  .att-mid .att-fill { background: var(--yellow); }
+  .att-lo .att-fill { background: var(--red); }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pass { background: rgba(34,197,94,0.1); color: #4ade80; }
+  .fail { background: rgba(239,68,68,0.1); color: #f87171; }
+  .status-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; animation: fadeUp 0.4s ease both;
+  }
+  .stat-card:nth-child(2) { animation-delay:0.06s; }
+  .stat-card:nth-child(3) { animation-delay:0.12s; }
+  .stat-card:nth-child(4) { animation-delay:0.18s; }
+  .stat-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .stat-val { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-val.cyan { color: var(--accent); }
+  .stat-val.purple { color: #a78bfa; }
+  .stat-val.green { color: #4ade80; }
+  .stat-val.orange { color: #fb923c; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 13px; font-family: var(--mono); font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  @media(max-width:700px) {
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+    .schema-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-top">
+      <div class="db-icon">🎓</div>
+      <h1>Student <span>Database</span> SQL Project</h1>
+    </div>
+    <div class="subtitle">-- Attendance · Internal & External Marks · Grades · Percentage</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('schema',this)">📐 Schema</button>
+    <button class="tab" onclick="showPanel('queries',this)">🔍 Queries</button>
+    <button class="tab" onclick="showPanel('data',this)">📊 Sample Data</button>
+    <button class="tab" onclick="showPanel('views',this)">👁 Views & Procs</button>
+  </div>
+
+  <!-- SCHEMA PANEL -->
+  <div id="schema" class="panel active">
+    <div class="section-title">Table Definitions</div>
+    <div class="schema-grid">
+
+      <div class="sql-card">
+        <div class="card-header"><div class="dot"></div><span class="card-title">students</span><span class="card-badge">PRIMARY</span></div>
+<pre><span class="kw">CREATE TABLE</span> <span class="tbl">students</span> (
+  student_id    <span class="type">INT</span> <span class="con">PRIMARY KEY AUTO_INCREMENT</span>,
+  roll_no       <span class="type">VARCHAR(20)</span> <span class="con">UNIQUE NOT NULL</span>,
+  full_name     <span class="type">VARCHAR(100)</span> <span class="con">NOT NULL</span>,
+  department    <span class="type">VARCHAR(60)</span> <span class="con">NOT NULL</span>,
+  semester      <span class="type">TINYINT</span> <span class="con">NOT NULL</span>,
+  section       <span class="type">CHAR(1)</span>,
+  email         <span class="type">VARCHAR(100)</span> <span class="con">UNIQUE</span>,
+  dob           <span class="type">DATE</span>,
+  enrolled_on   <span class="type">DATE</span> <span class="kw">DEFAULT</span> <span class="fn">CURRENT_DATE</span>
+);</pre>
+      </div>
+
+      <div class="sql-card">
+        <div class="card-header"><div class="dot"></div><span class="card-title">subjects</span><span class="card-badge">LOOKUP</span></div>
+<pre><span class="kw">CREATE TABLE</span> <span class="tbl">subjects</span> (
+  subject_id    <span class="type">INT</span> <span class="con">PRIMARY KEY AUTO_INCREMENT</span>,
+  subject_code  <span class="type">VARCHAR(20)</span> <span class="con">UNIQUE NOT NULL</span>,
+  subject_name  <span class="type">VARCHAR(100)</span> <span class="con">NOT NULL</span>,
+  department    <span class="type">VARCHAR(60)</span>,
+  semester      <span class="type">TINYINT</span>,
+  credits       <span class="type">TINYINT</span>,
+  max_internal  <span class="type">INT</span> <span class="kw">DEFAULT</span> <span class="num">30</span>,
+  max_external  <span class="type">INT</span> <span class="kw">DEFAULT</span> <span class="num">70</span>
+);</pre>
+      </div>
+
+      <div class="sql-card">
+        <div class="card-header"><div class="dot"></div><span class="card-title">attendance</span><span class="card-badge">TRACKING</span></div>
+<pre><span class="kw">CREATE TABLE</span> <span class="tbl">attendance</span> (
+  att_id        <span class="type">INT</span> <span class="con">PRIMARY KEY AUTO_INCREMENT</span>,
+  student_id    <span class="type">INT</span>,
+  subject_id    <span class="type">INT</span>,
+  total_classes <span class="type">INT</span> <span class="con">NOT NULL</span>,
+  attended      <span class="type">INT</span> <span class="con">NOT NULL</span>,
+  att_percent   <span class="type">DECIMAL(5,2)</span> <span class="kw">AS</span> (
+    <span class="fn">ROUND</span>(attended/<span class="fn">NULLIF</span>(total_classes,<span class="num">0</span>)*<span class="num">100</span>,<span class="num">2</span>)
+  ) <span class="con">STORED</span>,
+  <span class="con">FOREIGN KEY</span>(student_id) <span class="kw">REFERENCES</span> <span class="tbl">students</span>(student_id),
+  <span class="con">FOREIGN KEY</span>(subject_id) <span class="kw">REFERENCES</span> <span class="tbl">subjects</span>(subject_id)
+);</pre>
+      </div>
+
+      <div class="sql-card">
+        <div class="card-header"><div class="dot"></div><span class="card-title">marks</span><span class="card-badge">CORE</span></div>
+<pre><span class="kw">CREATE TABLE</span> <span class="tbl">marks</span> (
+  mark_id       <span class="type">INT</span> <span class="con">PRIMARY KEY AUTO_INCREMENT</span>,
+  student_id    <span class="type">INT</span>,
+  subject_id    <span class="type">INT</span>,
+  internal_marks <span class="type">DECIMAL(5,2)</span> <span class="kw">DEFAULT</span> <span class="num">0</span>,
+  external_marks <span class="type">DECIMAL(5,2)</span> <span class="kw">DEFAULT</span> <span class="num">0</span>,
+  total_marks   <span class="type">DECIMAL(6,2)</span> <span class="kw">AS</span> (
+    internal_marks + external_marks
+  ) <span class="con">STORED</span>,
+  percentage    <span class="type">DECIMAL(5,2)</span>,  <span class="cmt">-- updated by trigger</span>
+  grade         <span class="type">VARCHAR(3)</span>,    <span class="cmt">-- updated by trigger</span>
+  exam_year     <span class="type">YEAR</span>,
+  <span class="con">FOREIGN KEY</span>(student_id) <span class="kw">REFERENCES</span> <span class="tbl">students</span>(student_id),
+  <span class="con">FOREIGN KEY</span>(subject_id) <span class="kw">REFERENCES</span> <span class="tbl">subjects</span>(subject_id)
+);</pre>
+      </div>
+
+    </div>
+
+    <div class="section-title" style="margin-top:8px;">Grade Scale & Trigger</div>
+    <div class="sql-card" style="margin-bottom:16px;">
+      <div class="card-header"><div class="dot" style="background:#f472b6"></div><span class="card-title">Auto Grade Trigger</span><span class="card-badge">TRIGGER</span></div>
+<pre><span class="kw">DELIMITER</span> $$
+<span class="kw">CREATE TRIGGER</span> <span class="fn">calc_grade_percent</span>
+<span class="kw">BEFORE INSERT ON</span> <span class="tbl">marks</span>
+<span class="kw">FOR EACH ROW</span>
+<span class="kw">BEGIN</span>
+  <span class="kw">DECLARE</span> max_tot <span class="type">INT</span>;
+  <span class="kw">SELECT</span> (max_internal + max_external) <span class="kw">INTO</span> max_tot
+  <span class="kw">FROM</span> <span class="tbl">subjects</span> <span class="kw">WHERE</span> subject_id = NEW.subject_id;
+
+  <span class="kw">SET</span> NEW.percentage = <span class="fn">ROUND</span>(
+    (NEW.internal_marks + NEW.external_marks) / max_tot * <span class="num">100</span>, <span class="num">2</span>);
+
+  <span class="kw">SET</span> NEW.grade = <span class="kw">CASE</span>
+    <span class="kw">WHEN</span> NEW.percentage >= <span class="num">90</span> <span class="kw">THEN</span> <span class="str">'O'</span>
+    <span class="kw">WHEN</span> NEW.percentage >= <span class="num">80</span> <span class="kw">THEN</span> <span class="str">'A+'</span>
+    <span class="kw">WHEN</span> NEW.percentage >= <span class="num">70</span> <span class="kw">THEN</span> <span class="str">'A'</span>
+    <span class="kw">WHEN</span> NEW.percentage >= <span class="num">60</span> <span class="kw">THEN</span> <span class="str">'B+'</span>
+    <span class="kw">WHEN</span> NEW.percentage >= <span class="num">50</span> <span class="kw">THEN</span> <span class="str">'B'</span>
+    <span class="kw">WHEN</span> NEW.percentage >= <span class="num">40</span> <span class="kw">THEN</span> <span class="str">'C'</span>
+    <span class="kw">ELSE</span> <span class="str">'F'</span>
+  <span class="kw">END</span>;
+<span class="kw">END</span>$$
+<span class="kw">DELIMITER</span> ;</pre>
+    </div>
+  </div>
+
+  <!-- QUERIES PANEL -->
+  <div id="queries" class="panel">
+    <div class="section-title">SQL Queries Reference</div>
+    <div class="query-list">
+
+      <div class="query-block open">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q01</span>
+          <span class="qtitle">Insert a new student</span>
+          <span class="qtag tag-insert">INSERT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Add a student record to the students table.</div>
+<pre><span class="kw">INSERT INTO</span> <span class="tbl">students</span>
+  (roll_no, full_name, department, semester, section, email, dob)
+<span class="kw">VALUES</span>
+  (<span class="str">'2024ECE001'</span>, <span class="str">'Priya Sharma'</span>, <span class="str">'Electronics & Communication'</span>,
+   <span class="num">3</span>, <span class="str">'A'</span>, <span class="str">'priya@college.edu'</span>, <span class="str">'2005-04-12'</span>);</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q02</span>
+          <span class="qtitle">Record marks (trigger auto-assigns grade & percentage)</span>
+          <span class="qtag tag-insert">INSERT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Insert marks — the BEFORE INSERT trigger auto-calculates percentage and grade.</div>
+<pre><span class="kw">INSERT INTO</span> <span class="tbl">marks</span>
+  (student_id, subject_id, internal_marks, external_marks, exam_year)
+<span class="kw">VALUES</span>
+  (<span class="num">1</span>, <span class="num">1</span>, <span class="num">26</span>, <span class="num">58</span>, <span class="num">2024</span>),
+  (<span class="num">1</span>, <span class="num">2</span>, <span class="num">22</span>, <span class="num">45</span>, <span class="num">2024</span>),
+  (<span class="num">2</span>, <span class="num">1</span>, <span class="num">28</span>, <span class="num">63</span>, <span class="num">2024</span>);</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q03</span>
+          <span class="qtitle">Full marksheet for a student</span>
+          <span class="qtag tag-select">SELECT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Get subject-wise internal, external, total, percentage, and grade for one student.</div>
+<pre><span class="kw">SELECT</span>
+  sub.subject_code,
+  sub.subject_name,
+  m.internal_marks,
+  sub.max_internal                      <span class="kw">AS</span> max_int,
+  m.external_marks,
+  sub.max_external                      <span class="kw">AS</span> max_ext,
+  m.total_marks,
+  (sub.max_internal + sub.max_external) <span class="kw">AS</span> max_total,
+  m.percentage,
+  m.grade
+<span class="kw">FROM</span> <span class="tbl">marks</span> m
+<span class="kw">JOIN</span> <span class="tbl">subjects</span> sub <span class="kw">ON</span> m.subject_id = sub.subject_id
+<span class="kw">WHERE</span> m.student_id = <span class="num">1</span>
+<span class="kw">ORDER BY</span> sub.subject_code;</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q04</span>
+          <span class="qtitle">Overall percentage & CGPA for all students</span>
+          <span class="qtag tag-select">SELECT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Aggregate total marks, overall percentage, rank, and pass/fail status.</div>
+<pre><span class="kw">SELECT</span>
+  s.roll_no,
+  s.full_name,
+  s.department,
+  s.semester,
+  <span class="fn">SUM</span>(m.total_marks)                    <span class="kw">AS</span> total_obtained,
+  <span class="fn">SUM</span>(sub.max_internal + sub.max_external) <span class="kw">AS</span> grand_total,
+  <span class="fn">ROUND</span>(<span class="fn">SUM</span>(m.total_marks) /
+    <span class="fn">SUM</span>(sub.max_internal + sub.max_external) * <span class="num">100</span>, <span class="num">2</span>) <span class="kw">AS</span> overall_pct,
+  <span class="fn">RANK</span>() <span class="kw">OVER</span>
+    (<span class="kw">PARTITION BY</span> s.semester <span class="kw">ORDER BY</span>
+      <span class="fn">SUM</span>(m.total_marks) <span class="kw">DESC</span>)            <span class="kw">AS</span> sem_rank,
+  <span class="kw">CASE WHEN MIN</span>(m.percentage) >= <span class="num">40</span>
+    <span class="kw">THEN</span> <span class="str">'PASS'</span> <span class="kw">ELSE</span> <span class="str">'FAIL'</span> <span class="kw">END</span>          <span class="kw">AS</span> result
+<span class="kw">FROM</span> <span class="tbl">students</span> s
+<span class="kw">JOIN</span> <span class="tbl">marks</span> m    <span class="kw">ON</span> s.student_id = m.student_id
+<span class="kw">JOIN</span> <span class="tbl">subjects</span> sub <span class="kw">ON</span> m.subject_id = sub.subject_id
+<span class="kw">GROUP BY</span> s.student_id
+<span class="kw">ORDER BY</span> overall_pct <span class="kw">DESC</span>;</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q05</span>
+          <span class="qtitle">Attendance shortfall (below 75%)</span>
+          <span class="qtag tag-select">SELECT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Find students with low attendance in any subject, and how many classes they need to reach 75%.</div>
+<pre><span class="kw">SELECT</span>
+  s.roll_no,
+  s.full_name,
+  sub.subject_name,
+  a.attended,
+  a.total_classes,
+  a.att_percent,
+  <span class="fn">GREATEST</span>(<span class="num">0</span>,
+    <span class="fn">CEIL</span>((<span class="num">0.75</span> * a.total_classes - a.attended)
+      / (<span class="num">1</span> - <span class="num">0.75</span>))
+  ) <span class="kw">AS</span> classes_needed_for_75
+<span class="kw">FROM</span> <span class="tbl">attendance</span> a
+<span class="kw">JOIN</span> <span class="tbl">students</span> s  <span class="kw">ON</span> a.student_id = s.student_id
+<span class="kw">JOIN</span> <span class="tbl">subjects</span> sub <span class="kw">ON</span> a.subject_id = sub.subject_id
+<span class="kw">WHERE</span> a.att_percent < <span class="num">75</span>
+<span class="kw">ORDER BY</span> a.att_percent <span class="kw">ASC</span>;</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q06</span>
+          <span class="qtitle">Subject-wise topper & average</span>
+          <span class="qtag tag-select">SELECT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Find the highest scorer and average marks per subject.</div>
+<pre><span class="kw">SELECT</span>
+  sub.subject_code,
+  sub.subject_name,
+  <span class="fn">MAX</span>(m.total_marks)        <span class="kw">AS</span> highest,
+  <span class="fn">MIN</span>(m.total_marks)        <span class="kw">AS</span> lowest,
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(m.total_marks),<span class="num">2</span>) <span class="kw">AS</span> avg_marks,
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(m.percentage),<span class="num">2</span>)  <span class="kw">AS</span> avg_pct,
+  <span class="fn">COUNT</span>(m.mark_id)          <span class="kw">AS</span> students_appeared
+<span class="kw">FROM</span> <span class="tbl">marks</span> m
+<span class="kw">JOIN</span> <span class="tbl">subjects</span> sub <span class="kw">ON</span> m.subject_id = sub.subject_id
+<span class="kw">GROUP BY</span> sub.subject_id
+<span class="kw">ORDER BY</span> avg_pct <span class="kw">DESC</span>;</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q07</span>
+          <span class="qtitle">Grade distribution count</span>
+          <span class="qtag tag-select">SELECT</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Count how many students got each grade across all subjects.</div>
+<pre><span class="kw">SELECT</span>
+  grade,
+  <span class="fn">COUNT</span>(*) <span class="kw">AS</span> total_count,
+  <span class="fn">ROUND</span>(<span class="fn">COUNT</span>(*) * <span class="num">100.0</span> /
+    (<span class="kw">SELECT</span> <span class="fn">COUNT</span>(*) <span class="kw">FROM</span> <span class="tbl">marks</span>), <span class="num">1</span>) <span class="kw">AS</span> percentage_share
+<span class="kw">FROM</span> <span class="tbl">marks</span>
+<span class="kw">GROUP BY</span> grade
+<span class="kw">ORDER BY</span> <span class="kw">FIELD</span>(grade, <span class="str">'O'</span>,<span class="str">'A+'</span>,<span class="str">'A'</span>,<span class="str">'B+'</span>,<span class="str">'B'</span>,<span class="str">'C'</span>,<span class="str">'F'</span>);</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">Q08</span>
+          <span class="qtitle">Update internal marks</span>
+          <span class="qtag tag-update">UPDATE</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Correct or update internal marks for a student in a subject.</div>
+<pre><span class="kw">UPDATE</span> <span class="tbl">marks</span>
+<span class="kw">SET</span>
+  internal_marks = <span class="num">27</span>,
+  percentage = <span class="fn">ROUND</span>((<span class="num">27</span> + external_marks) /
+    (<span class="kw">SELECT</span> max_internal + max_external
+     <span class="kw">FROM</span> <span class="tbl">subjects</span>
+     <span class="kw">WHERE</span> subject_id = marks.subject_id) * <span class="num">100</span>, <span class="num">2</span>)
+<span class="kw">WHERE</span> student_id = <span class="num">2</span>
+  <span class="kw">AND</span> subject_id = <span class="num">1</span>
+  <span class="kw">AND</span> exam_year = <span class="num">2024</span>;</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DATA PANEL -->
+  <div id="data" class="panel">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total Students</div><div class="stat-val cyan">8</div><div class="stat-sub">Sem 3 · ECE</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Percentage</div><div class="stat-val purple">68.4%</div><div class="stat-sub">Across all subjects</div></div>
+      <div class="stat-card"><div class="stat-label">Pass Rate</div><div class="stat-val green">87.5%</div><div class="stat-sub">7 of 8 students</div></div>
+      <div class="stat-card"><div class="stat-label">Low Attendance</div><div class="stat-val orange">2</div><div class="stat-sub">Below 75%</div></div>
+    </div>
+
+    <div class="section-title">marks — Sample Records</div>
+    <div class="table-wrap" style="margin-bottom:24px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Roll No</th><th>Student Name</th><th>Subject</th><th>Internal <small>/30</small></th><th>External <small>/70</small></th><th>Total <small>/100</small></th><th>%</th><th>Grade</th><th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="marks-table"></tbody>
+      </table>
+    </div>
+
+    <div class="section-title">attendance — Sample Records</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Roll No</th><th>Student Name</th><th>Subject</th><th>Attended</th><th>Total</th><th>Attendance %</th><th>Status</th></tr>
+        </thead>
+        <tbody id="att-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VIEWS PANEL -->
+  <div id="views" class="panel">
+    <div class="section-title">Views & Stored Procedures</div>
+    <div class="query-list">
+
+      <div class="query-block open">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">V01</span>
+          <span class="qtitle">VIEW — Full Student Report Card</span>
+          <span class="qtag tag-view">VIEW</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">A reusable view joining all tables for report card generation.</div>
+<pre><span class="kw">CREATE VIEW</span> <span class="fn">vw_student_report</span> <span class="kw">AS</span>
+<span class="kw">SELECT</span>
+  s.roll_no,
+  s.full_name,
+  s.department,
+  s.semester,
+  sub.subject_code,
+  sub.subject_name,
+  sub.credits,
+  m.internal_marks,
+  m.external_marks,
+  m.total_marks,
+  m.percentage,
+  m.grade,
+  a.att_percent,
+  <span class="kw">CASE</span>
+    <span class="kw">WHEN</span> m.percentage >= <span class="num">40</span> <span class="kw">AND</span> a.att_percent >= <span class="num">75</span>
+      <span class="kw">THEN</span> <span class="str">'ELIGIBLE'</span>
+    <span class="kw">WHEN</span> a.att_percent < <span class="num">75</span>
+      <span class="kw">THEN</span> <span class="str">'DETAINED'</span>
+    <span class="kw">ELSE</span> <span class="str">'FAIL'</span>
+  <span class="kw">END</span> <span class="kw">AS</span> exam_status
+<span class="kw">FROM</span> <span class="tbl">students</span> s
+<span class="kw">JOIN</span> <span class="tbl">marks</span>      m   <span class="kw">ON</span> s.student_id   = m.student_id
+<span class="kw">JOIN</span> <span class="tbl">subjects</span>   sub <span class="kw">ON</span> m.subject_id   = sub.subject_id
+<span class="kw">LEFT JOIN</span> <span class="tbl">attendance</span> a
+  <span class="kw">ON</span> s.student_id = a.student_id
+ <span class="kw">AND</span> m.subject_id = a.subject_id;</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">V02</span>
+          <span class="qtitle">VIEW — Department Toppers</span>
+          <span class="qtag tag-view">VIEW</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Shows rank-1 student per department per semester using window functions.</div>
+<pre><span class="kw">CREATE VIEW</span> <span class="fn">vw_dept_toppers</span> <span class="kw">AS</span>
+<span class="kw">WITH</span> ranked <span class="kw">AS</span> (
+  <span class="kw">SELECT</span>
+    s.department, s.semester,
+    s.roll_no, s.full_name,
+    <span class="fn">ROUND</span>(<span class="fn">SUM</span>(m.total_marks) /
+      <span class="fn">SUM</span>(sub.max_internal + sub.max_external)*<span class="num">100</span>, <span class="num">2</span>) <span class="kw">AS</span> pct,
+    <span class="fn">RANK</span>() <span class="kw">OVER</span> (
+      <span class="kw">PARTITION BY</span> s.department, s.semester
+      <span class="kw">ORDER BY</span> <span class="fn">SUM</span>(m.total_marks) <span class="kw">DESC</span>
+    ) <span class="kw">AS</span> rnk
+  <span class="kw">FROM</span> <span class="tbl">students</span> s
+  <span class="kw">JOIN</span> <span class="tbl">marks</span> m    <span class="kw">ON</span> s.student_id = m.student_id
+  <span class="kw">JOIN</span> <span class="tbl">subjects</span> sub <span class="kw">ON</span> m.subject_id = sub.subject_id
+  <span class="kw">GROUP BY</span> s.student_id
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> ranked <span class="kw">WHERE</span> rnk = <span class="num">1</span>;</pre>
+        </div>
+      </div>
+
+      <div class="query-block">
+        <div class="qheader" onclick="toggleQ(this)">
+          <span class="qnum">P01</span>
+          <span class="qtitle">PROCEDURE — Get Student Report Card</span>
+          <span class="qtag tag-proc">PROCEDURE</span>
+          <span class="toggle-arrow">▶</span>
+        </div>
+        <div class="qbody">
+          <div class="qdesc">Pass a roll number to get a formatted report card for that student.</div>
+<pre><span class="kw">DELIMITER</span> $$
+<span class="kw">CREATE PROCEDURE</span> <span class="fn">sp_GetReportCard</span>(
+  <span class="kw">IN</span>  p_roll_no  <span class="type">VARCHAR(20)</span>,
+  <span class="kw">IN</span>  p_year     <span class="type">YEAR</span>
+)
+<span class="kw">BEGIN</span>
+  <span class="kw">SELECT</span>
+    r.subject_code,
+    r.subject_name,
+    r.credits,
+    r.internal_marks,
+    r.external_marks,
+    r.total_marks,
+    r.percentage,
+    r.grade,
+    r.att_percent,
+    r.exam_status
+  <span class="kw">FROM</span> <span class="fn">vw_student_report</span> r
+  <span class="kw">JOIN</span> <span class="tbl">students</span> s <span class="kw">ON</span> s.roll_no = r.roll_no
+  <span class="kw">JOIN</span> <span class="tbl">marks</span>    m <span class="kw">ON</span> m.student_id = s.student_id
+  <span class="kw">WHERE</span> r.roll_no = p_roll_no
+    <span class="kw">AND</span> m.exam_year = p_year;
+<span class="kw">END</span>$$
+<span class="kw">DELIMITER</span> ;
+<span class="cmt">-- Usage:</span>
+<span class="kw">CALL</span> <span class="fn">sp_GetReportCard</span>(<span class="str">'2024ECE001'</span>, <span class="num">2024</span>);</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleQ(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+// Sample data
+const students = [
+  {roll:'2024ECE001', name:'Priya Sharma'},
+  {roll:'2024ECE002', name:'Rahul Verma'},
+  {roll:'2024ECE003', name:'Ananya Singh'},
+  {roll:'2024ECE004', name:'Mohit Gupta'},
+  {roll:'2024ECE005', name:'Sneha Patel'},
+  {roll:'2024ECE006', name:'Karan Mehra'},
+  {roll:'2024ECE007', name:'Divya Nair'},
+  {roll:'2024ECE008', name:'Arjun Das'},
+];
+const subjects = ['Digital Electronics','Signals & Systems','Network Theory'];
+const marksData = [
+  [26,58],[22,45],[28,63],[19,38],[27,62],[25,55],[29,66],[20,42],
+  [24,52],[18,40],[26,60],[21,48],[28,64],[23,53],[27,58],[16,35],
+  [25,56],[20,44],[27,61],[22,49],[26,59],[24,54],[28,65],[19,41],
+];
+const attData = [
+  [38,42],[30,42],[41,42],[28,42],[40,42],[32,42],[42,42],[25,42],
+  [35,40],[38,40],[39,40],[27,40],[40,40],[36,40],[40,40],[30,40],
+];
+
+function getGrade(pct) {
+  if(pct>=90) return 'O';
+  if(pct>=80) return 'A+';
+  if(pct>=70) return 'A';
+  if(pct>=60) return 'B+';
+  if(pct>=50) return 'B';
+  if(pct>=40) return 'C';
+  return 'F';
+}
+function gradeClass(g) {
+  if(g==='O') return 'grade-O';
+  if(g==='A+'||g==='A') return 'grade-A';
+  if(g==='B+'||g==='B') return 'grade-B';
+  if(g==='C') return 'grade-C';
+  return 'grade-F';
+}
+
+// Build marks table
+const mt = document.getElementById('marks-table');
+marksData.forEach((m, i) => {
+  const s = students[i % 8];
+  const sub = subjects[i % 3];
+  const tot = m[0]+m[1];
+  const pct = Math.round(tot);
+  const grade = getGrade(pct);
+  const pass = pct >= 40;
+  mt.innerHTML += `<tr>
+    <td>${s.roll}</td>
+    <td>${s.name}</td>
+    <td>${sub}</td>
+    <td>${m[0]}</td>
+    <td>${m[1]}</td>
+    <td><strong>${tot}</strong></td>
+    <td>${pct}%</td>
+    <td><span class="grade-badge ${gradeClass(grade)}">${grade}</span></td>
+    <td><span class="status-pill ${pass?'pass':'fail'}">${pass?'PASS':'FAIL'}</span></td>
+  </tr>`;
+});
+
+// Build attendance table
+const at = document.getElementById('att-table');
+attData.forEach((a, i) => {
+  const s = students[i % 8];
+  const sub = subjects[i % 2];
+  const pct = Math.round(a[0]/a[1]*100);
+  const cls = pct>=75 ? 'att-hi' : pct>=60 ? 'att-mid' : 'att-lo';
+  const label = pct>=75 ? 'Sufficient' : pct>=60 ? 'Warning' : 'Shortage';
+  const labelCls = pct>=75 ? 'pass' : 'fail';
+  at.innerHTML += `<tr>
+    <td>${s.roll}</td>
+    <td>${s.name}</td>
+    <td>${sub}</td>
+    <td>${a[0]}</td>
+    <td>${a[1]}</td>
+    <td>
+      <div class="att-bar ${cls}">
+        <div class="att-track"><div class="att-fill" style="width:${pct}%"></div></div>
+        <span>${pct}%</span>
+      </div>
+    </td>
+    <td><span class="status-pill ${labelCls}">${label}</span></td>
+  </tr>`;
+});
+</script>
+</body>
+</html>
